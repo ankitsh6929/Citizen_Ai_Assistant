@@ -1,0 +1,32 @@
+__pycache__/
+*.pyc
+
+.venv/
+
+citizen.db
+
+response.wav
+
+node_modules/
+frontend/node_modules/
+
+dist/
+frontend/dist/
+
+
+# Python
+__pycache__/
+*.pyc
+
+# Database
+citizen.db
+
+# Generated audio
+audio.wav
+response.wav
+
+# Virtual env
+.venv/
+
+# Environment variables
+.env

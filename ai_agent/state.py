@@ -5,6 +5,8 @@ class AgentState(TypedDict):
 
     query: str
 
+    session_id: str
+
     intent: str
 
     tool_result: str
@@ -14,3 +16,5 @@ class AgentState(TypedDict):
     memory: list
 
     rag_context: str
+
+    final_answer: bool

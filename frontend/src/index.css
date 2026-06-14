@@ -109,3 +109,39 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  background: #111827;
+  border-right: 1px solid #333;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.new-chat-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-item {
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #1f2937;
+}
+
+.session-item:hover {
+  background: #374151;
+}

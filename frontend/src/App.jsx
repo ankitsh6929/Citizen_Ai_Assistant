@@ -1,19 +1,29 @@
-import { useState } from "react";
+import Sidebar from "./components/Sidebar";
+
+import { useState,useEffect } from "react";
 import axios from "axios";
 
-function App() {
+import ChatWindow from "./components/ChatWindow";
+import ChatInput from "./components/ChatInput";
+import VoiceRecorder from "./components/VoiceRecorder";
 
-  const [loading, setLoading] = useState(false);
-  const [typing, setTyping] = useState(false);
+function App() {
+  useEffect(() => {
+
+  createNewChat();
+  loadSessions();
+
+}, []);
 
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
 
-  const [audioFile, setAudioFile] = useState(null);
-  const [audioResponse, setAudioResponse] = useState("");
-  const [voiceText, setVoiceText] = useState("");
+  const [typing, setTyping] = useState(false);
 
-  const [language, setLanguage] =
+  const [audioFile, setAudioFile] =
+    useState(null);
+
+  const [language] =
     useState("hi-IN");
 
   const [mediaRecorder, setMediaRecorder] =
@@ -22,33 +32,163 @@ function App() {
   const [isRecording, setIsRecording] =
     useState(false);
 
-  const sendMessage = async () => {
 
-  if (!query.trim()) return;
+  const [sessionId, setSessionId] =
+    useState(null);  
 
-  const userMessage = {
-    role: "user",
-    text: query
-  };
+  
+  const [sessions, setSessions] =
+    useState([]);
 
-  setMessages(prev => [
-    ...prev,
-    userMessage
-  ]);
 
-  setLoading(true);
-  setTyping(true);
+
+
+
+
+
+
+  const createNewChat = async () => {
 
   try {
 
     const res = await axios.post(
-      "http://127.0.0.1:8000/chat",
-      {
-        query: query
-      }
+      "http://127.0.0.1:8000/new-chat"
     );
 
-    setTimeout(() => {
+    setSessionId(
+      res.data.session_id
+    );
+
+    setMessages([]);
+
+    await loadSessions();
+
+    console.log(
+      "New Session:",
+      res.data.session_id
+    );
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
+
+};
+
+
+
+
+
+
+
+
+  const loadSessions = async () => {
+
+  try {
+
+    const res = await axios.get(
+      "http://127.0.0.1:8000/sessions"
+    );
+
+    console.log(
+      "SESSIONS:",
+      res.data.sessions
+    );
+
+    setSessions(
+      res.data.sessions
+    );
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
+
+};
+
+ const loadChatHistory = async (sessionId) => {
+
+  try {
+
+    const res = await axios.get(
+      `http://127.0.0.1:8000/history/${sessionId}`
+    );
+
+    console.log(
+      "History Response:",
+      res.data
+    );
+
+    const loadedMessages =
+      res.data.messages || [];
+
+    console.log(
+      "Loaded Messages:",
+      loadedMessages
+    );
+
+    setSessionId(sessionId);
+
+    setMessages([
+      ...loadedMessages
+    ]);
+
+  } catch (error) {
+
+    console.error(error);
+
+  }
+
+};
+
+
+
+
+
+
+
+  const sendMessage = async () => {
+
+    if (!sessionId) {
+
+  console.error(
+    "NO SESSION ID FOUND"
+  );
+
+  return;
+}
+
+    if (!query.trim()) return;
+
+    const userMessage = {
+      role: "user",
+      text: query
+    };
+
+    setMessages(prev => [
+      ...prev,
+      userMessage
+    ]);
+
+    setTyping(true);
+
+    try {
+
+      console.log({
+  query,
+  sessionId,
+  type: typeof sessionId
+});
+
+      const res = await axios.post(
+        "http://127.0.0.1:8000/chat",
+        {
+          query,
+          session_id : sessionId
+        }
+      );
 
       const botMessage = {
         role: "assistant",
@@ -60,22 +200,17 @@ function App() {
         botMessage
       ]);
 
-      setTyping(false);
+    } catch (error) {
 
-    }, 1200);
+      console.error(error);
 
-  } catch (error) {
-
-    console.error(error);
+    }
 
     setTyping(false);
 
-  }
+    setQuery("");
 
-  setLoading(false);
-
-  setQuery("");
-};
+  };
 
   const uploadVoice = async (
     selectedFile = audioFile
@@ -108,463 +243,169 @@ function App() {
         }
       );
 
-      setAudioResponse(
-        res.data.audio_file
-      );
+      const userMessage = {
+        role: "user",
+        text:
+          res.data.user_text ||
+          "Voice Message"
+      };
 
-      setVoiceText(
-        res.data.response_text
-      );
+      const botMessage = {
+        role: "assistant",
+        text:
+          res.data.response_text,
+        audio:
+          res.data.audio_file
+      };
+
+      setMessages(prev => [
+        ...prev,
+        userMessage,
+        botMessage
+      ]);
 
     } catch (error) {
 
       console.error(error);
 
-      alert(
-        "Voice upload failed"
-      );
     }
+
   };
 
   const startRecording = async () => {
 
-    try {
+    const stream =
+      await navigator.mediaDevices.getUserMedia({
+        audio: true
+      });
 
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          audio: true
-        });
+    const recorder =
+      new MediaRecorder(stream);
 
-      const recorder =
-        new MediaRecorder(stream);
+    const chunks = [];
 
-      const chunks = [];
+    recorder.ondataavailable =
+      (event) => {
 
-      recorder.ondataavailable = (
-        event
-      ) => {
-        chunks.push(event.data);
-      };
-
-      recorder.onstop = async () => {
-
-        const blob = new Blob(
-          chunks,
-          {
-            type: "audio/wav"
-          }
+        chunks.push(
+          event.data
         );
 
-        const file = new File(
-          [blob],
-          "recording.wav",
-          {
-            type: "audio/wav"
-          }
-        );
-
-        setAudioFile(file);
-
-        await uploadVoice(file);
       };
 
-      recorder.start();
+    recorder.onstop =
+      async () => {
 
-      setMediaRecorder(recorder);
+        const blob =
+          new Blob(
+            chunks,
+            {
+              type:
+                "audio/wav"
+            }
+          );
 
-      setIsRecording(true);
+        const file =
+          new File(
+            [blob],
+            "recording.wav",
+            {
+              type:
+                "audio/wav"
+            }
+          );
 
-    } catch (error) {
+        await uploadVoice(
+          file
+        );
 
-      console.error(error);
+      };
 
-      alert(
-        "Microphone permission denied"
-      );
-    }
+    recorder.start();
+
+    setMediaRecorder(
+      recorder
+    );
+
+    setIsRecording(
+      true
+    );
+
   };
 
   const stopRecording = () => {
 
-    if (mediaRecorder) {
+    mediaRecorder?.stop();
 
-      mediaRecorder.stop();
+    setIsRecording(
+      false
+    );
 
-      setIsRecording(false);
-
-    }
   };
 
-  return (
+ return (
+
+  <div
+    style={{
+      background: "linear-gradient(180deg,#202123,#111827)",
+      color: "white",
+      minHeight: "100vh",
+      display: "flex"
+    }}
+  >
+
+    <Sidebar
+      sessions={sessions}
+      createNewChat={createNewChat}
+      selectSession={loadChatHistory}
+    />
 
     <div
-    
       style={{
-        background: "#0f172a",
-        minHeight: "100vh",
-        color: "white",
-        padding: "20px"
-      }}
-    >
-    <style>
-{`
-@keyframes pulse {
-
-  0% {
-    opacity: 0.3;
-  }
-
-  50% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0.3;
-  }
-
-}
-`}
-</style>
-      <h1
-        style={{
-          textAlign: "center"
-        }}
-      >
-        Citizen AI Assistant
-      </h1>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          marginBottom: "20px"
-        }}
-      >
-
-        <input
-          type="text"
-          value={query}
-          onChange={(e) =>
-            setQuery(e.target.value)
-          }
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              sendMessage();
-            }
-          }}
-          placeholder="Ask a question..."
-          style={{
-            width: "60%",
-            padding: "12px"
-          }}
-        />
-
-
-        {
-  loading && (
-
-    <p
-      style={{
-        textAlign: "center",
-        color: "#38bdf8"
-      }}
-    >
-      Processing...
-    </p>
-
-  )
-}
-
-        <button
-          onClick={sendMessage}
-          style={{
-            marginLeft: "10px",
-            padding: "12px"
-          }}
-        >
-          Send
-        </button>
-
-        <button
-  onClick={() => {
-    setMessages([]);
-    setVoiceText("");
-    setAudioResponse("");
-  }}
-  style={{
-    marginLeft: "10px",
-    padding: "12px",
-    background: "#dc2626",
-    color: "white"
-  }}
->
-  Clear Chat
-</button>
-
-      </div>
-
-
-
-
-
-
-
-
-
-      <div
-  style={{
-    maxWidth: "900px",
-    margin: "auto"
-  }}
->
-
-  {messages.map((msg, index) => (
-
-    <div
-      key={index}
-      style={{
+        flex: 1,
         display: "flex",
-        justifyContent:
-          msg.role === "user"
-            ? "flex-end"
-            : "flex-start",
-        marginBottom: "15px"
+        flexDirection: "column"
       }}
     >
 
-      <div
-        style={{
-          background:
-            msg.role === "user"
-              ? "#2563eb"
-              : "#1e293b",
-          padding: "14px",
-          borderRadius: "15px",
-          maxWidth: "70%",
-          boxShadow:
-            "0px 0px 10px rgba(0,0,0,0.3)"
-        }}
-      >
-
-        <strong>
-          {msg.role === "user"
-            ? "You"
-            : "Assistant"}
-        </strong>
-
-        <br />
-        <br />
-
-        {msg.text}
-
-      </div>
-
-    </div>
-
-  ))}
-
-  {typing && (
-
-    <div
-      style={{
-        textAlign: "left",
-        marginTop: "10px"
-      }}
-    >
-
-      <div
-        style={{
-          display: "inline-block",
-          background: "#1e293b",
-          padding: "12px",
-          borderRadius: "15px"
-        }}
-      >
-        Assistant is typing...
-      </div>
-
-    </div>
-
-  )}
-
-</div>
-
-
-
-
-
-
-
-      <hr
-        style={{
-          margin: "30px 0"
-        }}
+      <ChatWindow
+        messages={messages}
+        typing={typing}
       />
 
-      <h2
-        style={{
-          textAlign: "center"
-        }}
-      >
-        Voice Assistant
-      </h2>
-
       <div
         style={{
-          textAlign: "center"
+          position: "sticky",
+          bottom: 0,
+          background: "#212121",
+          padding: "20px",
+          display: "flex",
+          alignItems: "center",
+          gap: "15px",
+          borderTop: "1px solid #333"
         }}
       >
 
-        <select
-          value={language}
-          onChange={(e) =>
-            setLanguage(e.target.value)
-          }
-          style={{
-            padding: "10px",
-            marginBottom: "15px"
-          }}
-        >
-
-          <option value="hi-IN">Hindi</option>
-          <option value="en-IN">English</option>
-          <option value="bn-IN">Bengali</option>
-          <option value="ta-IN">Tamil</option>
-          <option value="te-IN">Telugu</option>
-
-        </select>
-
-        <br />
-
-        <input
-          type="file"
-          accept=".wav"
-          onChange={(e) =>
-            setAudioFile(
-              e.target.files[0]
-            )
-          }
+        <VoiceRecorder
+          isRecording={isRecording}
+          startRecording={startRecording}
+          stopRecording={stopRecording}
         />
 
-        <button
-          onClick={() =>
-            uploadVoice()
-          }
-          style={{
-            marginLeft: "10px"
-          }}
-        >
-          Upload Voice
-        </button>
+        <ChatInput
+          query={query}
+          setQuery={setQuery}
+          sendMessage={sendMessage}
+        />
 
-        <br />
-        <br />
-
-        <button
-          onClick={startRecording}
-          disabled={isRecording}
-        >
-          🎤 Start Recording
-        </button>
-
-        <button
-          onClick={stopRecording}
-          disabled={!isRecording}
-          style={{
-            marginLeft: "10px"
-          }}
-        >
-          ⏹ Stop Recording
-        </button>
-
-        {
-  isRecording ? (
-
-    <div
-      style={{
-        marginTop: "20px"
-      }}
-    >
-
-      <h3>
-        🎤 Recording...
-      </h3>
-
-      <div
-        style={{
-          fontSize: "30px",
-          animation:
-            "pulse 1s infinite"
-        }}
-      >
-        🎙️🎙️🎙️
       </div>
 
     </div>
 
-  ) : (
+  </div>
 
-    <p>
-      ⚪ Idle
-    </p>
+);
 
-  )
-}
-
-      </div>
-
-      {voiceText && (
-
-        <div
-          style={{
-            maxWidth: "900px",
-            margin: "30px auto",
-            background: "#1e293b",
-            padding: "20px",
-            borderRadius: "10px"
-          }}
-        >
-
-          <h3>
-            AI Response
-          </h3>
-
-          <p>
-            {voiceText}
-          </p>
-
-        </div>
-
-      )}
-
-      {audioResponse && (
-
-        <div
-          style={{
-            textAlign: "center"
-          }}
-        >
-
-          <h3>
-            Audio Response
-          </h3>
-
-          <audio
-            controls
-            autoPlay
-          >
-            <source
-              src={`http://127.0.0.1:8000/audio/${audioResponse}`}
-              type="audio/wav"
-            />
-          </audio>
-
-        </div>
-
-      )}
-
-    </div>
-  );
 }
 
 export default App;

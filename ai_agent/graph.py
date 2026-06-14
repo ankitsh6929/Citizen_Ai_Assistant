@@ -25,12 +25,29 @@ builder.add_node(
     response_node
 )
 
-builder.set_entry_point("intent")
 
-builder.add_edge(
-    "intent",
-    "tool"
+builder.set_entry_point(
+    "intent"
 )
+
+
+def route_intent(state):
+
+    return state["intent"]
+
+
+builder.add_conditional_edges(
+    "intent",
+    route_intent,
+    {
+        "scheme": "tool",
+        "eligibility": "tool",
+        "recommendation": "tool",
+        "grievance": "tool",
+        "general": "response"
+    }
+)
+
 
 builder.add_edge(
     "tool",

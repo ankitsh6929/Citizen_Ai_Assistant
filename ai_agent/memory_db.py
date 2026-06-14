@@ -1,52 +1,79 @@
-# ai_agent/memory_db.py
-
 import sqlite3
 
-conn = sqlite3.connect(
-    "citizen.db",
-    check_same_thread=False
-)
 
-cursor = conn.cursor()
+def get_connection():
 
-cursor.execute("""
+    return sqlite3.connect(
+        "citizen.db",
+        check_same_thread=False
+    )
+
+
+conn = get_connection()
+
+conn.execute("""
 CREATE TABLE IF NOT EXISTS memory (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT,
     role TEXT,
     message TEXT
 )
 """)
 
 conn.commit()
+conn.close()
 
 
-def save_memory(role, message):
+def save_memory(
+    session_id,
+    role,
+    message
+):
 
-    cursor.execute(
+    conn = get_connection()
+
+    conn.execute(
         """
-        INSERT INTO memory (
+        INSERT INTO memory
+        (
+            session_id,
             role,
             message
         )
-        VALUES (?, ?)
+        VALUES (?, ?, ?)
         """,
-        (role, message)
+        (
+            session_id,
+            role,
+            message
+        )
     )
 
     conn.commit()
+    conn.close()
 
 
-def get_memory():
+def get_memory(
+    session_id
+):
 
-    cursor.execute(
+    conn = get_connection()
+
+    rows = conn.execute(
         """
-        SELECT role, message
+        SELECT
+        role,
+        message
         FROM memory
+        WHERE session_id = ?
         ORDER BY id DESC
         LIMIT 20
-        """
-    )
+        """,
+        (
+            session_id,
+        )
+    ).fetchall()
 
-    rows = cursor.fetchall()
+    conn.close()
 
     return rows[::-1]
