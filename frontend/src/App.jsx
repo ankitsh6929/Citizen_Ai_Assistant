@@ -52,7 +52,7 @@ function App() {
   try {
 
     const res = await axios.post(
-      "http://127.0.0.1:8000/new-chat"
+      "http://13.222.185.113:8000/new-chat"
     );
 
     setSessionId(
@@ -88,7 +88,7 @@ function App() {
   try {
 
     const res = await axios.get(
-      "http://127.0.0.1:8000/sessions"
+      "http://13.222.185.113:8000/sessions"
     );
 
     console.log(
@@ -113,7 +113,7 @@ function App() {
   try {
 
     const res = await axios.get(
-      `http://127.0.0.1:8000/history/${sessionId}`
+      `http://13.222.185.113:8000/history/${sessionId}`
     );
 
     console.log(
@@ -183,7 +183,7 @@ function App() {
 });
 
       const res = await axios.post(
-        "http://127.0.0.1:8000/chat",
+        "http://13.222.185.113:8000/chat",
         {
           query,
           session_id : sessionId
@@ -233,7 +233,7 @@ function App() {
     try {
 
       const res = await axios.post(
-        "http://127.0.0.1:8000/voice",
+        "http://13.222.185.113:8000/voice",
         formData,
         {
           headers: {
