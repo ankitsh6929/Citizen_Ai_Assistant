@@ -1,5 +1,5 @@
 from ai_agent.graph import graph
-from ai_agent.rag_search import search_rag
+
 
 from backend.services.sarvam_stt import speech_to_text
 from backend.services.sarvam_translate import translate_text
@@ -107,9 +107,7 @@ def process_query(
         session_id
     )
 
-    rag_context = search_rag(
-        query
-    )
+    rag_context = ""
 
     result = graph.invoke(
         {
@@ -230,9 +228,7 @@ def process_voice(
 
     print("English:", english_text)
 
-    rag_context = search_rag(
-        english_text
-    )
+    rag_context = ""
 
     result = graph.invoke(
         {
